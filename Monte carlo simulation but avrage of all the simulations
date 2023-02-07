@@ -1,0 +1,47 @@
+import requests
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Fetch historical Bitcoin data using an API
+def fetch_data(symbol, interval):
+    url = f"https://min-api.cryptocompare.com/data/v2/histo{interval}?fsym={symbol}&tsym=USD&limit=2000"
+    data = requests.get(url).json()["Data"]["Data"]
+    df = pd.DataFrame(data)
+    df['timestamp'] = pd.to_datetime(df['time'], unit='s')
+    df.set_index('timestamp', inplace=True)
+    return df
+
+df = fetch_data("BTC", "day")
+
+# Calculate daily returns
+returns = df['close'].pct_change().dropna()
+
+# Define the simulation parameters
+num_simulations = 1000
+num_days = 365
+
+simulated_price_df = pd.DataFrame()
+last_price = df['close'][-1]
+
+# Run the Monte Carlo simulation
+for i in range(num_simulations):
+    count = 0
+    simulated_prices = []
+    price = last_price
+    while count < num_days:
+        simulated_price = price * (1 + np.random.normal(returns.mean(), returns.std()))
+        simulated_prices.append(simulated_price)
+        price = simulated_price
+        count += 1
+    simulated_price_df[f'simulation_{i}'] = simulated_prices
+
+# Plot the average of all the possible simulations
+plt.figure(figsize=(12,5))
+plt.plot(simulated_price_df.mean(axis=1), 'r', label='Average')
+plt.title("Monte Carlo Simulation of Bitcoin Prices")
+plt.xlabel("Days")
+plt.ylabel("Price (USD)")
+plt.legend()
+plt.show()
+y
